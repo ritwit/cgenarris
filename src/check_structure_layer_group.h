@@ -1,8 +1,10 @@
 #ifndef CHECK_STRUCTURE_LAYER_GROUP_H
 #define CHECK_STRUCTURE_LAYER_GROUP_H
 
-void check_layer_group(crystal* xtal);
-void create_xtal_in_designated_lg(int lg,crystal* xtal,crystal* tmp_xtal);
+int check_layer_group(crystal* xtal);
+void check_symmet_equiv_atoms(int lg,crystal* tmp_xtal,int Z, int N);
+void compare_all_atoms_distance(float* Xcord,float* Ycord,float* Zcord,
+								float* new_Xcord,float* new_Ycord,float* new_Zcord);
 //194
 //void main();
 static const int spg_to_lg[194][5] = 
@@ -394,7 +396,7 @@ static const int spg_to_lg[194][5] =
     // spg =193
     {80,0,0,0,0},
     // spg =194
-    {80,0,0,0,0},
+    {80,0,0,0,0}
 
 
 };
