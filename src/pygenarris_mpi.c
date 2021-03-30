@@ -8,6 +8,7 @@
 #include "spg_generation.h"
 #include "combinatorics.h"
 #include "check_structure.h"
+#include "check_structure_layer_group.h"
 #include "crystal_utils.h"
 #include "molecule_utils.h"
 #include "lattice_generator.h"
@@ -733,7 +734,7 @@ void mpi_generate_layer_with_vdw_cutoff_matrix(
 					{
 						if (counter < spg_num_structures)
 						{				
-                            //add a layer group check here
+                            				//add a layer group check here
                             check_layer_group(random_crystal);			
 							print_layer2file(random_crystal, out_file);
 							printf("#Rank %8d: Generation successful.\n", my_rank);
@@ -760,6 +761,7 @@ void mpi_generate_layer_with_vdw_cutoff_matrix(
 							success_flag = 1; 
 							if(counter < spg_num_structures)
 							{	
+								check_layer_group(random_crystal);
 								print_layer2file(random_crystal, out_file);
 								printf("#Rank %8d: Generation successful.\n", rank);
 								counter++;
