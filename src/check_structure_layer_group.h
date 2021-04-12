@@ -2,9 +2,9 @@
 #define CHECK_STRUCTURE_LAYER_GROUP_H
 
 int check_layer_group(crystal* xtal);
-void check_symmet_equiv_atoms(int lg,crystal* tmp_xtal,int Z, int N);
-void compare_all_atoms_distance(float* Xcord,float* Ycord,float* Zcord,
-								float* new_Xcord,float* new_Ycord,float* new_Zcord);
+int check_symmet_equiv_atoms(int lg,crystal* tmp_xtal,int Z, int N);
+int compare_all_atoms_distance(crystal* tmp_xtal,crystal* tmp_xtal_each_op);
+void bring_all_coords_to_pos(crystal* xtal);
 //194
 //void main();
 static const int spg_to_lg[194][5] = 
