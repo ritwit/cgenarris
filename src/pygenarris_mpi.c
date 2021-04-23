@@ -501,7 +501,7 @@ void mpi_generate_layer_with_vdw_cutoff_matrix(
 	//*seed = (unsigned int)abs(my_rank*7 + random_seed);  //some random seed private for each threads
     	//*seed2 = (unsigned int)abs(my_rank*17 + random_seed);
     	//does not use random seed from user
-    	*seed += my_rank*7 + seed_shift*13; //some random seed private for each threads
+    *seed += my_rank*7 + seed_shift*13; //some random seed private for each threads
 	*seed2 = my_rank*17 + seed_shift*11;
 	init_genrand(abs(*seed));
 	
@@ -589,8 +589,9 @@ void mpi_generate_layer_with_vdw_cutoff_matrix(
 	{
 		printf("COMPATIBLE LAYER GROUP INFO:\n");
 		printf("-----------------------------------------------------\n");
-		printf("Detecting compatible layer groups"
-			   " from molecule symmetries...\n");
+		printf("Detecting layer groups"
+			   " compatible with molecule symmetries...\n");
+        printf("**lattice compatibility is not considered here, truly compatible layer groups might be fewer**\n");
 	}
 
 	//compatible space groups are stored in compatible_spg. see the 
@@ -681,7 +682,8 @@ void mpi_generate_layer_with_vdw_cutoff_matrix(
 									 interface_area_mean,
 									 interface_area_std,
 									 volume_multiplier,
-									 SET_INTERFACE_AREA);
+									 SET_INTERFACE_AREA
+                                     );
 		
 					//printf("I am after generate_crystal\n");
 					
@@ -698,8 +700,8 @@ void mpi_generate_layer_with_vdw_cutoff_matrix(
 
 					if (result ==2)
 					{
-						//printf("I am in result==2");
-						//fflush(stdout);
+						if (my_rank==0)
+                            printf("**Could not find compatible lattice, Layer group %d is incompatible**\n",spg);
 						break;
 					}
 					
@@ -734,8 +736,10 @@ void mpi_generate_layer_with_vdw_cutoff_matrix(
 						if (counter < spg_num_structures)
 						{				
                             				//add a layer group check here
-                            check_layer_group(random_crystal);			
-							print_layer2file(random_crystal, out_file);
+                            int detected_lg = check_layer_group(random_crystal);	
+                            //printf("final returned lg is %d\n",detected_lg);	
+							print_layer2file(detected_lg,random_crystal, out_file);
+                            //print_layer2file(random_crystal, out_file);
 							printf("#Rank %8d: Generation successful.\n", my_rank);
 							counter++;
 							success_flag = 1;
@@ -760,8 +764,10 @@ void mpi_generate_layer_with_vdw_cutoff_matrix(
 							success_flag = 1; 
 							if(counter < spg_num_structures)
 							{	
-								check_layer_group(random_crystal);
-								print_layer2file(random_crystal, out_file);
+								int detected_lg = check_layer_group(random_crystal);
+                                //printf("final returned lg is %d\n",detected_lg);			
+							    print_layer2file(detected_lg,random_crystal, out_file);
+                                //print_layer2file(random_crystal, out_file);
 								printf("#Rank %8d: Generation successful.\n", rank);
 								counter++;
 							}

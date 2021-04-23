@@ -3,6 +3,7 @@
 #include <time.h>
 #include <unistd.h>
 #include <stddef.h>
+#include <string.h>
 #include "mpi.h"
 #include "read_input.h"
 #include "spg_generation.h"
@@ -15,6 +16,7 @@
 #include "algebra.h"
 #include "cgenarris_mpi.h"
 #include "pygenarris_mpi.h"
+#include "check_structure_layer_group.h"
 
 //maximum mulipicity possible
 #define ZMAX 192
@@ -29,6 +31,7 @@ void create_vdw_matrix_from_sr(molecule *mol,
 			       float *vdw_matrix,
 			       float sr,
 			       int Z);
+
 
 int main(int argc, char **argv)
 {
@@ -138,3 +141,28 @@ int main(int argc, char **argv)
 	
 }
 
+/*
+
+
+// for layer group detection test
+
+int main(int argc, char **argv)
+{
+	
+	crystal* xtal = (crystal*) malloc(sizeof(crystal));
+	char* geo_name ="buggy_struct.in";
+	
+    allocate_xtal(xtal,4,20);
+	read_crystal_geometry(xtal,geo_name);
+	xtal->spg = 15;
+	xtal->num_atoms_in_molecule = 20;
+	xtal->Z = 4;
+	xtal->wyckoff_position = 2;
+
+    int detected_lg = check_layer_group(xtal);
+	printf("attempted is %d, detected is %d\n",xtal->spg,detected_lg);
+    free_xtal(xtal);
+    return 0;
+
+}
+*/

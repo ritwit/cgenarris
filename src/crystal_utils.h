@@ -3,7 +3,8 @@
 
 void print_crystal(crystal* xtal);
 void print_crystal2file(crystal* xtal, FILE* out_file);
-void print_layer2file(crystal* xtal, FILE* out_file);
+//void print_layer2file(crystal* xtal, FILE* out_file);
+void print_layer2file(int detected_lg,crystal* xtal, FILE* out_file);
 void compute_molecule_COM(crystal xtal, float com[3], int i);
 void remove_close_molecules(crystal* xtal);
 void remove_close_molecules(crystal* xtal);

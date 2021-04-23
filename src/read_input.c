@@ -290,6 +290,76 @@ void read_geometry(molecule* mol)
 
 }
 
+//added here, read a geometty.in for crystal, convert to xtal obj
+void read_crystal_geometry(crystal* xtal, char* geo_name)
+{
+    FILE *fileptr;
+    size_t len = 0;
+    int read;
+    char *line = NULL;
+    char *sub_line = NULL;
+    int i = 0;
+    int lv_count = 0;
+
+    //find_number_of atoms
+    fileptr = fopen(geo_name,"r");
+    //check if file exits
+    if(!fileptr)
+    {
+        printf("***ERROR: no geometry.in file \n");
+        exit(EXIT_FAILURE);
+    }
+
+     while ((read = getline(&line, &len, fileptr)) != -1)
+    {
+        if (strstr(line, "#") != NULL)
+            continue;
+
+        sub_line=strtok(line," ");
+		if (strcmp(sub_line,"lattice_vector")==0)
+		{
+			sub_line = strtok(NULL," ");
+		    xtal->lattice_vectors[lv_count][0] = atof(sub_line);
+			printf("sub_line: %s",sub_line);
+		    fflush(stdout);
+		    sub_line = strtok(NULL," ");
+		    printf("sub_line: %s",sub_line);
+		    fflush(stdout);
+		    xtal->lattice_vectors[lv_count][1] = atof(sub_line);
+		    sub_line = strtok(NULL," ");
+		    printf("sub_line: %s",sub_line);
+		    fflush(stdout);
+            xtal->lattice_vectors[lv_count][2] = atof(sub_line);
+			lv_count ++;
+            continue;
+		}
+        //printf("%s \n" , sub_line);
+        if(strcmp(sub_line, "atom") == 0)
+		{
+			sub_line=strtok(NULL," ");
+        	xtal->Xcord[i]=atof(sub_line);
+        	printf("%f \t",xtal->Xcord[i]);
+        	sub_line=strtok(NULL," ");
+        	xtal->Ycord[i]=atof(sub_line);
+        	printf("%f \t",xtal->Ycord[i]);
+        	sub_line=strtok(NULL," ");
+        	xtal->Zcord[i]=atof(sub_line);
+        	printf("%f \t",xtal->Zcord[i]);
+        	sub_line=strtok(NULL," ");
+        	xtal->atoms[2*i]=*sub_line;
+        	if(*(sub_line+1) == '\n' || *(sub_line+1) == ' ' || *(sub_line+1) == '\0' )
+            	xtal->atoms[2*i+1]=' ';
+        	else
+            	xtal->atoms[2*i+1]=*(sub_line+1);
+        	i++;
+		}
+       
+    }
+    fclose(fileptr);
+
+
+}
+
 
 void print_input_settings(int* num_structures,
                           int* Z,

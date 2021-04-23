@@ -310,7 +310,7 @@ int generate_substrate_lattice_combs(int *all_substrate_combo, float lattice_vec
 
 
 void generate_layer_lattice(int *all_substrate_combo,float lattice_vector[3][3], int spg,
-	float max_angle, float min_angle, float target_volume, float lattice_vector_2d[2][3],	      int num_combo,float interface_area_mean,float interface_area_std,
+	float max_angle, float min_angle, float target_volume, float lattice_vector_2d[2][3],int num_combo,float interface_area_mean,float interface_area_std,
 	int volume_multiplier,int SET_INTERFACE_AREA)
 {	
 	
@@ -374,8 +374,6 @@ void generate_layer_lattice(int *all_substrate_combo,float lattice_vector[3][3],
 			counter++;
 			if (counter > 10000000)
 			{
-				//printf("I am over 10000\n");
-				//fflush(stdout);
 				for (int i = 0; i < 3; i++)
 					{
 						for (int j =0; j<3; j++)
@@ -436,8 +434,6 @@ void generate_layer_lattice(int *all_substrate_combo,float lattice_vector[3][3],
 			counter++;
 			if (counter > 10000000)
 			{
-				//printf("I am over 10000\n");
-				//fflush(stdout);
 				for (int i = 0; i < 3; i++)
 					{
 						for (int j =0; j<3; j++)
@@ -504,8 +500,6 @@ void generate_layer_lattice(int *all_substrate_combo,float lattice_vector[3][3],
 			counter++;
 			if (counter > 10000000)
 			{
-				//printf("I am over 10000\n");
-				//fflush(stdout);
 				for (int i = 0; i < 3; i++)
 					{
 						for (int j =0; j<3; j++)
@@ -569,8 +563,7 @@ void generate_layer_lattice(int *all_substrate_combo,float lattice_vector[3][3],
 			counter++;
 			if (counter > 10000000)
 			{
-				//printf("I am over 10000\n");
-				//fflush(stdout);
+		
 				for (int i = 0; i < 3; i++)
 					{
 						for (int j =0; j<3; j++)
@@ -630,8 +623,7 @@ void generate_layer_lattice(int *all_substrate_combo,float lattice_vector[3][3],
 			counter++;
 			if (counter > 10000000)
 			{
-				//printf("I am over 10000\n");
-				//fflush(stdout);
+				
 				for (int i = 0; i < 3; i++)
 					{
 						for (int j =0; j<3; j++)
@@ -691,8 +683,7 @@ void generate_layer_lattice(int *all_substrate_combo,float lattice_vector[3][3],
 			counter++;
 			if (counter > 10000000)
 			{
-				//printf("I am over 10000\n");
-				//fflush(stdout);
+	
 				for (int i = 0; i < 3; i++)
 					{
 						for (int j =0; j<3; j++)
