@@ -1,78 +1,143 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <math.h>
 #include <time.h>
+#include <unistd.h>
 #include "lattice_generator.h"
 #include "randomgen.h"
 //#include "niggli.h"
 
-#define LOWB 3  //lower bound for length of lattice vector
-#define PI 3.141592653
+
+////////// MACROS AND DECLARATIONS //////////////////
+#define LOWB        3  //lower bound for length of lattice vector
+#define PI          3.141592653
+#define MAX_ANGLE   150 * PI / 180
+#define MIN_ANGLE   30 * PI / 180
+#define EPS         0.1
+enum COMP_TYPE {DISTINCT, TWO_EQUAL, ALL_EQUAL};
+
+static float gen_angle(float angle_std);
+static void set_lattice_vectors_zero(float lattice_vector[3][3]);
+static void gen_principal_comps(float *ax,
+                                float *by,
+                                float *cz,
+                                float target_volume,
+                                float norm_std,
+                                int type);
 
 
-float obliqness = 0.6;
+void generate_lattice(float lattice_vector[3][3],
+                      int spg,
+                      float norm_std,
+                      float angle_std,
+                      float target_volume)
+{
+    static int first_time = 1;
+    static FILE *lattice_file = NULL;
+    static float const_lattice[3][3];
 
-//angles are in radians
+    // If there's a lattice file, donot generate random lattices.
+    if(first_time)
+    {
+        if(access("lattice.dat", F_OK) == 0)
+        {
+            lattice_file = fopen("lattice.dat", "r");
+            int nmatches = 0;
+            nmatches = fscanf(lattice_file, "%f %f %f", &const_lattice[0][0],
+                &const_lattice[0][1], &const_lattice[0][2]);
+            nmatches += fscanf(lattice_file, "%f %f %f", &const_lattice[1][0],
+                &const_lattice[1][1], &const_lattice[1][2]);
+            nmatches += fscanf(lattice_file, "%f %f %f", &const_lattice[2][0],
+                &const_lattice[2][1], &const_lattice[2][2]);
+            // Check if read correctly
+            if(nmatches != 9)
+            {
+                printf("***ERROR: bad lattice.dat file; unable to read\n");
+                exit(EXIT_FAILURE);
+            }
+            fclose(lattice_file);
+        }
+        first_time = 0;
+    }
+
+    if(lattice_file != NULL)
+    {
+        memcpy(lattice_vector, const_lattice, 9*sizeof(lattice_vector[0][0]));
+        return;
+    }
+
+    if(spg < 1 || spg > 230)
+    {
+        printf("***ERROR: generate_lattice: spg out of bounds***");
+        exit(EXIT_FAILURE);
+    }
+
+    else if (spg <= 2)
+        gen_triclinic_lattice(lattice_vector, target_volume, norm_std, angle_std);
+
+    else if (spg <= 15)
+        gen_monoclinic_lattice(lattice_vector, target_volume, norm_std, angle_std);
+
+    else if (spg <= 74)
+        gen_orthorhombic_lattice(lattice_vector, target_volume, norm_std);
+
+    else if (spg <= 142)
+        gen_tetragonal_lattice(lattice_vector, target_volume, norm_std);
+
+    else if (spg <= 167)
+        gen_hexagonal_lattice(lattice_vector, target_volume, norm_std);
+        //same as hexagonal?
+
+    else if (spg <= 194)
+        gen_hexagonal_lattice(lattice_vector, target_volume, norm_std);
+    else if (spg <= 230)
+        gen_cubic_lattice(lattice_vector, target_volume);
+
+    standardise_lattice(lattice_vector, spg);
+
+    return;
+}
+
+////////////////////// FUNCTIONS FOR GENERATING DIFFERENT LATTICES ///////////////
 
 void gen_triclinic_lattice(float lattice_vector[3][3],
-    float target_volume, float max_angle, float min_angle)
+                           float target_volume,
+                           float norm_std,
+                           float angle_std)
 {
-    int attempt = 0;
-    float random01;
+    float ax, by, cz;
 
-    float x, y, z, ax, by, cz;
-    do{
-        do {x = normal_dist_ab(1, obliqness); } while(x < 0.1);
-        do {y = normal_dist_ab(1, obliqness); } while(y < 0.1);
-        do {z = normal_dist_ab(1, obliqness); } while(z < 0.1 );
-        float factor =  cbrt (target_volume / (x*y*z) );
-        ax = x*factor;
-        by = y*factor;
-        cz = z*factor;
-    }while(ax < LOWB ||by < LOWB || cz < LOWB);
     //select principal components
-/*
-    float random01 = uniform_dist_01();
-    float ax = random01*(target_volume/(LOWB*LOWB) - LOWB) + LOWB;
-    random01 = uniform_dist_01();
-    float by = random01*(target_volume/(ax*LOWB) - LOWB) +LOWB;
-    float cz = target_volume/(ax*by);
-*/
+    gen_principal_comps(&ax, &by, &cz, target_volume, norm_std, DISTINCT);
+
     //generate random angles
-    random01 = uniform_dist_01();;
-    float beta = random01*(max_angle - min_angle) + min_angle;
-    random01 = uniform_dist_01();
-    float gamma = random01*(max_angle - min_angle) + min_angle;
+    float beta = gen_angle(angle_std);
+    float gamma = gen_angle(angle_std);
+
+    // Not all values of alpha are allowed.
+    // Loop until a valid value is selected.
     float alpha;
     float cosbeta2;
     float cosbeta3;
     do
     {
-        random01 = uniform_dist_01();;
-        alpha = random01*(max_angle - min_angle) + min_angle;
+        alpha = gen_angle(angle_std);
         cosbeta2 = (cos(alpha) - cos(gamma)*cos(beta))/sin(gamma);
         cosbeta3 = sqrt(1 - cos(beta)*cos(beta) - cosbeta2*cosbeta2);
-        attempt++;
-        if (attempt > 1000)
-        {
-            printf("*WARNING: bad input*\n");
-        }
     }
-    while(abs(cosbeta2) >= 1 ||
-        (cos(beta)*cos(beta) + cosbeta2*cosbeta2) > 1 );
+    while( fabs(cosbeta2) >= 1 || (cos(beta)*cos(beta) + cosbeta2*cosbeta2) > 1 );
 
     float bx = by/tan(gamma);
     float modc = cz/cosbeta3;
     float cx = modc*cos(beta);
     float cy = modc*cosbeta2;
 
+    set_lattice_vectors_zero(lattice_vector);
+
     lattice_vector[0][0] = ax;
     lattice_vector[1][1] = by;
     lattice_vector[2][2] = cz;
-
-    lattice_vector[0][1] = 0;
-    lattice_vector[0][2] = 0;
-    lattice_vector[1][2] = 0;
 
     lattice_vector[1][0] = bx;
     lattice_vector[2][0] = cx;
@@ -81,198 +146,104 @@ void gen_triclinic_lattice(float lattice_vector[3][3],
 
 
 void gen_monoclinic_lattice(float lattice_vector[3][3],
-    float target_volume, float max_angle, float min_angle)
+                            float target_volume,
+                            float norm_std,
+                            float angle_std)
 {
+    float ax, by, cz;
+    gen_principal_comps(&ax, &by, &cz, target_volume, norm_std, DISTINCT);
 
-    float x, y, z, ax, by, cz;
-    do{
-        do {x = normal_dist_ab(1, obliqness); } while(x < 0.1);
-        do {y = normal_dist_ab(1, obliqness); } while(y < 0.1);
-        do {z = normal_dist_ab(1, obliqness); } while(z < 0.1 );
-        float factor =  cbrt (target_volume / (x*y*z) );
-        ax = x*factor;
-        by = y*factor;
-        cz = z*factor;
-    }while(ax < LOWB ||by < LOWB || cz < LOWB);
-
-    float random01 = uniform_dist_01();;
-    float beta = random01*(max_angle - min_angle) + min_angle;
-
+    float beta = gen_angle(angle_std);
     float cx = cz / tan(beta);
 
+    set_lattice_vectors_zero(lattice_vector);
     lattice_vector[0][0] = ax;
     lattice_vector[1][1] = by;
     lattice_vector[2][2] = cz;
-
-    lattice_vector[0][1] = 0;
-    lattice_vector[0][2] = 0;
-    lattice_vector[1][2] = 0;
-
-    lattice_vector[1][0] = 0;
     lattice_vector[2][0] = cx;
-    lattice_vector[2][1] = 0;
+    return;
 }
 
 void gen_orthorhombic_lattice(float lattice_vector[3][3],
-    float target_volume)
+                              float target_volume,
+                              float norm_std)
 {
-    float x, y, z, ax, by, cz;
-    do{
-        do {x = normal_dist_ab(1, obliqness); } while(x < 0.1);
-        do {y = normal_dist_ab(1, obliqness); } while(y < 0.1);
-        do {z = normal_dist_ab(1, obliqness); } while(z < 0.1 );
-        float factor =  cbrt (target_volume / (x*y*z) );
-        ax = x*factor;
-        by = y*factor;
-        cz = z*factor;
-    }while(ax < LOWB ||by < LOWB || cz < LOWB);
+    float ax, by, cz;
+    gen_principal_comps(&ax, &by, &cz, target_volume, norm_std, DISTINCT);
 
+    set_lattice_vectors_zero(lattice_vector);
     lattice_vector[0][0] = ax;
     lattice_vector[1][1] = by;
     lattice_vector[2][2] = cz;
-
-    lattice_vector[0][1] = 0;
-    lattice_vector[0][2] = 0;
-    lattice_vector[1][2] = 0;
-
-    lattice_vector[1][0] = 0;
-    lattice_vector[2][0] = 0;
-    lattice_vector[2][1] = 0;
+    return;
 }
 
 
 void gen_tetragonal_lattice(float lattice_vector[3][3],
-    float target_volume)
+                            float target_volume,
+                            float norm_std)
 {
-    float x, y, z, ax, by, cz;
-    do{
-        do {x = normal_dist_ab(1, obliqness); } while(x < 0.1);
-        y = x;
-        do {z = normal_dist_ab(1, obliqness); } while(z < 0.1 );
-        float factor =  cbrt (target_volume / (x*y*z) );
-        ax = x*factor;
-        by = y*factor;
-        cz = z*factor;
-    }while(ax < LOWB ||by < LOWB || cz < LOWB);
+    float ax, by, cz;
+    gen_principal_comps(&ax, &by, &cz, target_volume, norm_std, TWO_EQUAL);
 
+    set_lattice_vectors_zero(lattice_vector);
     lattice_vector[0][0] = ax;
     lattice_vector[1][1] = by;
     lattice_vector[2][2] = cz;
-
-    lattice_vector[0][1] = 0;
-    lattice_vector[0][2] = 0;
-    lattice_vector[1][2] = 0;
-
-    lattice_vector[1][0] = 0;
-    lattice_vector[2][0] = 0;
-    lattice_vector[2][1] = 0;
-}
-
-void gen_hexagonal_lattice(float lattice_vector[3][3],
-    float target_volume)
-{
-    float random01 = uniform_dist_01();
-    float cz = random01*(target_volume/(LOWB*LOWB) - LOWB) + LOWB;
-    float ax = sqrt (target_volume/cz) ;
-    float gamma = 120* PI/180;
-    float by = ax*sin(gamma);
-    float bx = ax*cos(gamma);
-
-    lattice_vector[0][0] = ax;
-    lattice_vector[1][1] = by;
-    lattice_vector[2][2] = cz;
-
-    lattice_vector[0][1] = 0;
-    lattice_vector[0][2] = 0;
-    lattice_vector[1][2] = 0;
-
-    lattice_vector[1][0] = bx;
-    lattice_vector[2][0] = 0;
-    lattice_vector[2][1] = 0;
-}
-
-void gen_cubic_lattice(float lattice_vector[3][3],
-    float target_volume)
-{
-    float a = cbrt(target_volume);
-
-    lattice_vector[0][0] = a;
-    lattice_vector[1][1] = a;
-    lattice_vector[2][2] = a;
-
-    lattice_vector[0][1] = 0;
-    lattice_vector[0][2] = 0;
-    lattice_vector[1][2] = 0;
-
-    lattice_vector[1][0] = 0;
-    lattice_vector[2][0] = 0;
-    lattice_vector[2][1] = 0;
-}
-
-
-void generate_lattice(float lattice_vector[3][3], int spg,
- float max_angle, float min_angle, float target_volume)
-{
-
-        if(spg < 1 || spg > 230)
-        printf("***ERROR: generate_lattice: spg out of bounds***");
-
-        else if (spg <= 2)
-        gen_triclinic_lattice(lattice_vector, target_volume, max_angle, min_angle);
-
-        else if (spg <= 15)
-        gen_monoclinic_lattice(lattice_vector, target_volume, max_angle, min_angle);
-
-        else if (spg <= 74)
-        gen_orthorhombic_lattice(lattice_vector, target_volume);
-
-        else if (spg <= 142)
-        gen_tetragonal_lattice(lattice_vector, target_volume);
-
-        else if (spg <= 167)
-        gen_hexagonal_lattice(lattice_vector, target_volume);
-        //same as heaxagonal?
-
-        else if (spg <= 194)
-        gen_hexagonal_lattice(lattice_vector, target_volume);
-
-        else if (spg <= 230)
-        gen_cubic_lattice(lattice_vector, target_volume);
-
-    
-        standardise_lattice(lattice_vector, spg);
-
-       // printf("check_constraint(lattice_vector) is %d\n",check_constraint(lattice_vector));
-       // fflush(stdout);
-
-
-    //printf("this is good lattice, return now");
-    //fflush(stdout);
-
-
 
     return;
 }
 
+void gen_hexagonal_lattice(float lattice_vector[3][3],
+                           float target_volume,
+                           float norm_std)
+{
+    float ax, by, cz;
+    gen_principal_comps(&ax, &by, &cz, target_volume, norm_std, TWO_EQUAL);
+
+    float gamma = 120 * PI/180;
+    by = ax * sin(gamma);
+    float bx = ax * cos(gamma);
+
+    set_lattice_vectors_zero(lattice_vector);
+    lattice_vector[0][0] = ax;
+    lattice_vector[1][1] = by;
+    lattice_vector[2][2] = cz;
+    lattice_vector[1][0] = bx;
+
+    return;
+}
+
+void gen_cubic_lattice(float lattice_vector[3][3],
+                       float target_volume)
+{
+    float a = cbrt(target_volume);
+
+    set_lattice_vectors_zero(lattice_vector);
+    lattice_vector[0][0] = a;
+    lattice_vector[1][1] = a;
+    lattice_vector[2][2] = a;
+
+    return;
+}
 
 //create a large volume lattice for testing compatiility
 void generate_fake_lattice(float lattice_vector[3][3], int spg)
 {
     const float ax = 15;
-
+    set_lattice_vectors_zero(lattice_vector);
 
     if(spg < 1 || spg > 230)
-    printf("***ERROR: generate_lattice: spg out of bounds***");
+    {
+        printf("***ERROR: generate_lattice: spg out of bounds***");
+        exit(EXIT_FAILURE);
+    }
 
     else if (spg <= 2)
     {
         lattice_vector[0][0] = ax;
         lattice_vector[1][1] = 0.8*ax;
         lattice_vector[2][2] = 0.5*ax;
-
-        lattice_vector[0][1] = 0;
-        lattice_vector[0][2] = 0;
-        lattice_vector[1][2] = 0;
 
         lattice_vector[1][0] = 0.8*ax*tan(10*PI/180);
         lattice_vector[2][0] = 0.5*ax*cos(85*PI/180);
@@ -284,14 +255,8 @@ void generate_fake_lattice(float lattice_vector[3][3], int spg)
         lattice_vector[0][0] = ax;
         lattice_vector[1][1] = 0.8*ax;
         lattice_vector[2][2] = 0.5*ax;
-
-        lattice_vector[0][1] = 0;
-        lattice_vector[0][2] = 0;
-        lattice_vector[1][2] = 0;
-
-        lattice_vector[1][0] = 0;
         lattice_vector[2][0] = 0.5*ax/tan(70*PI/180);
-        lattice_vector[2][1] = 0;
+
     }
 
     else if (spg <= 74)
@@ -299,14 +264,6 @@ void generate_fake_lattice(float lattice_vector[3][3], int spg)
         lattice_vector[0][0] = ax;
         lattice_vector[1][1] = 0.8*ax;
         lattice_vector[2][2] = 0.5*ax;
-
-        lattice_vector[0][1] = 0;
-        lattice_vector[0][2] = 0;
-        lattice_vector[1][2] = 0;
-
-        lattice_vector[1][0] = 0;
-        lattice_vector[2][0] = 0;
-        lattice_vector[2][1] = 0;
     }
 
     else if (spg <= 142)
@@ -314,14 +271,6 @@ void generate_fake_lattice(float lattice_vector[3][3], int spg)
         lattice_vector[0][0] = ax;
         lattice_vector[1][1] = ax;
         lattice_vector[2][2] = 0.5*ax;
-
-        lattice_vector[0][1] = 0;
-        lattice_vector[0][2] = 0;
-        lattice_vector[1][2] = 0;
-
-        lattice_vector[1][0] = 0;
-        lattice_vector[2][0] = 0;
-        lattice_vector[2][1] = 0;
     }
 
     else if (spg <= 194)
@@ -329,14 +278,7 @@ void generate_fake_lattice(float lattice_vector[3][3], int spg)
         lattice_vector[0][0] = ax;
         lattice_vector[1][1] = ax*sin(120*PI/180);
         lattice_vector[2][2] = 0.5*ax;
-
-        lattice_vector[0][1] = 0;
-        lattice_vector[0][2] = 0;
-        lattice_vector[1][2] = 0;
-
         lattice_vector[1][0] = ax*cos(120*PI/180);
-        lattice_vector[2][0] = 0;
-        lattice_vector[2][1] = 0;
     }
 
     else if (spg <= 230)
@@ -344,14 +286,6 @@ void generate_fake_lattice(float lattice_vector[3][3], int spg)
         lattice_vector[0][0] = ax;
         lattice_vector[1][1] = ax;
         lattice_vector[2][2] = ax;
-
-        lattice_vector[0][1] = 0;
-        lattice_vector[0][2] = 0;
-        lattice_vector[1][2] = 0;
-
-        lattice_vector[1][0] = 0;
-        lattice_vector[2][0] = 0;
-        lattice_vector[2][1] = 0;
     }
 }
 
@@ -428,6 +362,60 @@ void standardise_lattice( float lattice[3][3], int spg)
 
 }
 
+static float gen_angle(float angle_std)
+{
+    float ang;
+    do{
+        ang = normal_dist_ab(PI/2, angle_std*PI/180);
+    }
+    while(ang > MAX_ANGLE || ang < MIN_ANGLE);
+
+    return ang;
+}
+
+static void set_lattice_vectors_zero(float lattice_vector[3][3])
+{
+    lattice_vector[0][0] = 0;
+    lattice_vector[0][1] = 0;
+    lattice_vector[0][2] = 0;
+
+    lattice_vector[1][0] = 0;
+    lattice_vector[1][1] = 0;
+    lattice_vector[1][2] = 0;
+
+    lattice_vector[2][0] = 0;
+    lattice_vector[2][1] = 0;
+    lattice_vector[2][2] = 0;
+    return;
+}
+
+static void gen_principal_comps(float *ax,
+                                float *by,
+                                float *cz,
+                                float target_volume,
+                                float norm_std,
+                                int type)
+{
+    float x, y, z;
+    do{
+        do {x = normal_dist_ab(1, norm_std); } while(x < EPS);
+
+        if (type == DISTINCT)
+            do {y = normal_dist_ab(1, norm_std); } while(y < EPS);
+        else
+            y = x;
+
+        do {z = normal_dist_ab(1, norm_std); } while(z < EPS);
+
+        float factor =  cbrt(target_volume / (x*y*z) );
+        *ax = x*factor;
+        *by = y*factor;
+        *cz = z*factor;
+    }
+    while(*ax < LOWB ||*by < LOWB ||*cz < LOWB);
+
+    return;
+}
 
 
 

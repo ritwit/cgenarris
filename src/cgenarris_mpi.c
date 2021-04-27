@@ -63,23 +63,27 @@ int main(int argc, char **argv)
     char spg_dist_type[10];  //spg distribution type
     int vol_attempt;    // no of attempts after which volume is resampled
     int random_seed;    //seed for random gen
+    float norm_dev;
+    float angle_std;
 
     read_geometry(mol);				//read molecule from geometry.in
     read_control(&num_structures,
 		 &Z,
-		 &Zp_max,			 
+		 &Zp_max,
 		 &volume_mean,
 		 &volume_std,
 		 &sr,
 		 &max_attempts,
-                 spg_dist_type,
-                 &vol_attempt,
-                 &random_seed,
+         spg_dist_type,
+         &vol_attempt,
+         &random_seed,
 		 &crystal_generation,
 		 &interface_area_mean,
 		 &interface_area_std,
 		 &volume_multiplier,
-		 lattice_vector_2d);	//get settings
+		 lattice_vector_2d,
+         &norm_dev,
+         &angle_std);	//get settings
     tol = TOL;
     int num_atoms_in_molecule = mol->num_of_atoms;
     int dim_vdw_matrix = num_atoms_in_molecule * Z ;
@@ -89,7 +93,7 @@ int main(int argc, char **argv)
 
     create_vdw_matrix_from_sr(mol, vdw_cutoff_matrix, sr, Z);
 
-    if (crystal_generation)     // for molecular crystal 
+    if (crystal_generation)     // for molecular crystal
 	{
 	    mpi_generate_molecular_crystals_with_vdw_cutoff_matrix(
 		vdw_cutoff_matrix,
@@ -104,11 +108,13 @@ int main(int argc, char **argv)
 		spg_dist_type,
 		vol_attempt,
 		random_seed,
+        norm_dev,
+        angle_std,
 		world_comm);
 
-    	    MPI_Finalize();
+    	MPI_Finalize();
 
-    	    return 0;
+        return 0;
 	}
 
 	else			// for layer generation
@@ -124,21 +130,20 @@ int main(int argc, char **argv)
 		interface_area_mean,
 		interface_area_std,
 		volume_multiplier,
-		tol, 
+		tol,
 		max_attempts,
 		spg_dist_type,
 		lattice_vector_2d,
 		vol_attempt,
 		random_seed,
 		world_comm);
-	
-    	    MPI_Finalize();
 
-    	    return 0;
+    	MPI_Finalize();
+        return 0;
 	}
 
-	
-	
+
+
 }
 
 /*

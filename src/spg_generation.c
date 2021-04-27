@@ -20,14 +20,11 @@ extern unsigned int *seed2;
 
 int generate_crystal(crystal* random_crystal, molecule* mol,float volume,
     float Z, float Zp_max, int spg, COMPATIBLE_SPG compatible_spg[],
-    int len_compatible_spg, int compatible_spg_index)
+    int len_compatible_spg, int compatible_spg_index,
+    float norm_dev, float angle_std)
 {
     Zp_max = 192; //stupid argument
     len_compatible_spg += 1; // not needed now; stupid argument
-
-    //crystal random_crystal;
-    float max_angle = 30 * PI/180;
-    float min_angle = 150 * PI/180;
 
     random_crystal->Z = Z;
     int N = mol->num_of_atoms;
@@ -42,7 +39,7 @@ int generate_crystal(crystal* random_crystal, molecule* mol,float volume,
     int hall_number;
     hall_number = hall_number_from_spg(spg);
 
-    generate_lattice(random_crystal->lattice_vectors, spg, max_angle, min_angle, volume);
+    generate_lattice(random_crystal->lattice_vectors, spg, norm_dev, angle_std, volume);
     //printf("I am done generating lattice");
     //fflush(stdout);
     //find a random pos
@@ -83,8 +80,8 @@ int generate_layer_crystal(crystal* random_crystal, molecule* mol,float volume,
 	//printf("I am in generate_crystal and Z is %f\n ",Z);
 
 	Zp_max = 192; //stupid argument
-        len_compatible_spg += 1; // not needed now; stupid argument 
-	
+        len_compatible_spg += 1; // not needed now; stupid argument
+
     //crystal random_crystal;
 	float max_angle = 150 * PI/180;
 	float min_angle = 30 * PI/180;
@@ -93,7 +90,7 @@ int generate_layer_crystal(crystal* random_crystal, molecule* mol,float volume,
 	int N = mol->num_of_atoms;
 
 	//copy molecules to an array to save it. molecule might deform
-	//upon many rotations.	
+	//upon many rotations.
 	float Xm[N]; //molecule X coordinate
 	float Ym[N];
 	float Zm[N];
@@ -101,7 +98,7 @@ int generate_layer_crystal(crystal* random_crystal, molecule* mol,float volume,
 	//set hall_number to spg
 	int hall_number;
 	hall_number = spg;
-	
+
 	generate_layer_lattice(all_substrate_combo,random_crystal->lattice_vectors, spg, max_angle, min_angle,
 				volume,lattice_vector_2d,num_combo,interface_area_mean,interface_area_std,
 				volume_multiplier,SET_INTERFACE_AREA);
@@ -128,25 +125,25 @@ int generate_layer_crystal(crystal* random_crystal, molecule* mol,float volume,
 		return 2;
 	}
 
-	
+
 	//find a random pos
-	int pos_index = rand_r(seed2) % compatible_spg[compatible_spg_index].num_allowed_pos; 
+	int pos_index = rand_r(seed2) % compatible_spg[compatible_spg_index].num_allowed_pos;
 	int pos = compatible_spg[compatible_spg_index].allowed_pos[pos_index]; //the index of compatible wykoff position
 	random_crystal->wyckoff_position = pos;
-	
+
 	//place, align and attempt to generate crystal at position pos
 	int result = lg_auto_align_and_generate_at_position(random_crystal,
 							mol,
 							hall_number,
-							spg, 
+							spg,
 							pos_index,
 							compatible_spg[compatible_spg_index]);
 	//copy back to mol
 	copy_positions_to_mol(mol, Xm, Ym, Zm);
-	
+
 	if(!result)
 	{
-		
+
 		return 0;
 	}
 	else

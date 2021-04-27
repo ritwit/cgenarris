@@ -11,12 +11,12 @@ PYTHON_H=/home/ritwit/anaconda3/include/python3.8/
 
 cgenarris_mpi: cgenarris_mpi.o read_input.o spg_generation.o lattice_generator.o algebra.o\
                molecule_utils.o combinatorics.o check_structure.o crystal_utils.o\
-               molecule_placement.o randomgen.o spglib.o pygenarris_mpi.o
+               molecule_placement.o randomgen.o spglib.o pygenarris_mpi.o lattice_generator_layer.o
 	$(CC) ${CFLAGS} *.o -o cgenarris_mpi.x -lm
 
 cgenarris_test: cgenarris_test.o read_input.o spg_generation.o lattice_generator.o algebra.o\
                molecule_utils.o combinatorics.o check_structure.o crystal_utils.o\
-               molecule_placement.o randomgen.o spglib.o pygenarris_mpi.o
+               molecule_placement.o randomgen.o spglib.o pygenarris_mpi.o lattice_generator_layer.o
 	$(CC) ${CFLAGS} *.o -o cgenarris_test.x -lm
 
 swig:
@@ -33,7 +33,7 @@ pygenarris:pygenarris.o read_input.o spg_generation.o lattice_generator.o algebr
 pygenarris_mpi:pygenarris_mpi.o read_input.o spg_generation.o lattice_generator.o algebra.o\
 		   molecule_utils.o combinatorics.o check_structure.o crystal_utils.o\
 		   molecule_placement.o randomgen.o  cgenarris_mpi.o swig_pygenarris_mpi\
-		   pywrap_pygenarris_mpi spglib.o
+		   pywrap_pygenarris_mpi lattice_generator_layer.o spglib.o
 	${CC} ${CFLAGS} -shared  *.o -o _pygenarris_mpi.so -lm
 
 pywrap: swig
@@ -44,6 +44,9 @@ pywrap_pygenarris_mpi:swig_pygenarris_mpi
 
 cgenarris_test.o: test_main.c
 	${CC} ${CFLAGS} -c test_main.c
+
+lattice_generator_layer.o: lattice_generator_layer.c
+	${CC} ${CFLAGS} -c lattice_generator_layer.c
 
 cgenarris_mpi.o:cgenarris_mpi.c
 	${CC} ${CFLAGS} -c cgenarris_mpi.c

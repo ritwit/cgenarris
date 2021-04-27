@@ -19,6 +19,8 @@ void mpi_generate_molecular_crystals_with_vdw_cutoff_matrix(
     char *spg_dist_type,
     int vol_attempt,
     int random_seed,
+    float norm_dev,
+    float angle_std,
     MPI_Comm world_comm);
 
 void mpi_generate_layer_with_vdw_cutoff_matrix(
@@ -32,12 +34,12 @@ void mpi_generate_layer_with_vdw_cutoff_matrix(
 	double interface_area_mean1,
 	double interface_area_std1,
 	int volume_multiplier,
-	double tol1, 
+	double tol1,
 	long max_attempts,
 	char *spg_dist_type,
 	float lattice_vector_2d_from_geo[2][3],
-    int vol_attempt,
-    int random_seed, 
+        int vol_attempt,
+        int random_seed,
 	MPI_Comm world_comm);
 
 void send_xtal(MPI_Comm comm, int destination, crystal* xtal, int total_atoms);

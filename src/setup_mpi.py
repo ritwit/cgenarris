@@ -66,7 +66,7 @@ pygenarris_mpi = Extension('_pygenarris_mpi',
                            include_dirs= ['./', numpy.get_include(), mpi4py.get_include()],
                            sources=['pygenarris_mpi.i', 'pygenarris_mpi.c', 'combinatorics.c', 'molecule_placement.c',
                            'algebra.c', 'molecule_utils.c','spg_generation.c', 'lattice_generator.c', 'crystal_utils.c',
-                           'check_structure.c', 'read_input.c', 'randomgen.c']+sources_spglib,
+                           'check_structure.c', 'read_input.c', 'randomgen.c', 'lattice_generator_layer.c']+sources_spglib,
                            extra_compile_args=["-std=gnu99", "-fPIC", "-O3"])
 
 setup (name = 'pygenarris_mpi',

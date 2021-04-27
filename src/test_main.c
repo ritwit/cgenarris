@@ -37,6 +37,8 @@ int regression_test(MPI_Comm world_comm)
     int volume_attempts = 10000;
     long max_attempts = 100000;
     char spg_dist_type[10] = "uniform";
+    float norm_dev = 0.4;
+    float angle_std = 8;
 
     // Read molecule
     read_geometry(&mol);
@@ -63,6 +65,8 @@ int regression_test(MPI_Comm world_comm)
         spg_dist_type,
         volume_attempts,
         seed,
+        norm_dev,
+        angle_std,
         world_comm);
 
     free(vdw_cutoff_matrix);
