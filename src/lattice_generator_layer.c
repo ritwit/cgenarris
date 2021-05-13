@@ -73,7 +73,7 @@ void generate_oblique_triclinic(float lattice_vector[3][3],
 
 void generate_oblique_monoclinic(float lattice_vector[3][3], 
 	float target_volume, float max_angle, float min_angle,float tmp_lattice_vec_a [3],
-        float tmp_lattice_vec_b [3],float tmp_lattice_vec_a_norm,float tmp_lattice_vec_b_norm,        float gamma)
+        float tmp_lattice_vec_b [3],float tmp_lattice_vec_a_norm,float tmp_lattice_vec_b_norm,float gamma)
 
 
 {
@@ -98,7 +98,7 @@ void generate_oblique_monoclinic(float lattice_vector[3][3],
 
 void generate_rectangle_monoclinic(float lattice_vector[3][3], 
 	float target_volume,float max_angle, float min_angle,float tmp_lattice_vec_a [3],
-        float tmp_lattice_vec_b [3],float tmp_lattice_vec_a_norm,float tmp_lattice_vec_b_norm,	      float gamma)
+        float tmp_lattice_vec_b [3],float tmp_lattice_vec_a_norm,float tmp_lattice_vec_b_norm,float gamma)
 
 
 {
@@ -196,7 +196,17 @@ int generate_substrate_lattice_combs(int *all_substrate_combo, float lattice_vec
 	float prim_lv[3][3] = {{lattice_vector_2d[0][0],lattice_vector_2d[0][1],lattice_vector_2d[0][2] },
 						   {lattice_vector_2d[1][0],lattice_vector_2d[1][1],lattice_vector_2d[1][2] },
 						   {0.0,0.0,1.0}};
-	float max_allowed_area = 0.5 * target_volume;
+	
+	//if target volum is small, allow more area to generate
+	float max_allowed_area;
+	if (target_volume < 300)
+	{
+		max_allowed_area = 0.75 * target_volume;
+	}
+	else
+	{
+		max_allowed_area = 0.5 * target_volume;
+	}
 	//set the max coefficient to the square root of max area
 	int max_coeff_1_4 = (int) sqrt(max_allowed_area ); 
 	int max_coeff_2_3 = (int) sqrt(max_allowed_area );
@@ -230,8 +240,9 @@ int generate_substrate_lattice_combs(int *all_substrate_combo, float lattice_vec
 			{
 				for (int factor_4 = -max_coeff_1_4; factor_4 <max_coeff_1_4; factor_4++)
 				{
-					// if determinant is zero, skip, also enforce right hand chirality
+					// if determinant is zero, skip, enforce right hand chirality now
 					if (factor_1 * factor_4 == factor_2 * factor_3 || factor_1 * factor_4 < factor_2 * factor_3)
+					//if (factor_1 * factor_4 == factor_2 * factor_3)
 					{ 
 						continue;
 					}
@@ -262,7 +273,7 @@ int generate_substrate_lattice_combs(int *all_substrate_combo, float lattice_vec
 					float new_area = sqrt(pow(cross[0],2)+pow(cross[1],2)+pow(cross[2],2));
 					float dot_product = new_vec_a[0] * new_vec_b[0] + new_vec_a[1] * new_vec_b[1] 
 								+new_vec_a[2] * new_vec_b[2] ;
-					float angle = acos(dot_product/(norm_new_vec_a * norm_new_vec_b)) * 180/PI;
+					float angle = acos(dot_product/(norm_new_vec_a * norm_new_vec_b)) * 180/PI;					
 
 					//if film area is greater than max_allowed, break the loop
 					if (new_area > max_allowed_area )
@@ -283,6 +294,16 @@ int generate_substrate_lattice_combs(int *all_substrate_combo, float lattice_vec
 					*(all_substrate_combo + num_combo*4 + 3) = factor_4;
 
 					num_combo ++;
+					/*
+					if (fabs(norm_new_vec_a-norm_new_vec_b)<1)
+					{
+						printf("fac_1, fac_2, fac_3, fac_4: %d %d %d %d\n",factor_1,factor_2,factor_3,factor_4);
+						printf("norm_new_vec_a,norm_new_vec_b: %f %f\n",norm_new_vec_a,norm_new_vec_b);
+						printf("new_area: %f\n",new_area);
+						printf("angle: %f\n",angle);
+						fflush(stdout);
+					}
+					*/
 
 				}
 
@@ -299,7 +320,7 @@ int generate_substrate_lattice_combs(int *all_substrate_combo, float lattice_vec
 
 
 void generate_layer_lattice(int *all_substrate_combo,float lattice_vector[3][3], int spg,
-	float max_angle, float min_angle, float target_volume, float lattice_vector_2d[2][3],	      int num_combo,float interface_area_mean,float interface_area_std,
+	float max_angle, float min_angle, float target_volume, float lattice_vector_2d[2][3],int num_combo,float interface_area_mean,float interface_area_std,
 	int volume_multiplier,int SET_INTERFACE_AREA)
 {	
 	
@@ -363,8 +384,6 @@ void generate_layer_lattice(int *all_substrate_combo,float lattice_vector[3][3],
 			counter++;
 			if (counter > 10000000)
 			{
-				//printf("I am over 10000\n");
-				//fflush(stdout);
 				for (int i = 0; i < 3; i++)
 					{
 						for (int j =0; j<3; j++)
@@ -382,8 +401,8 @@ void generate_layer_lattice(int *all_substrate_combo,float lattice_vector[3][3],
 			new_area = sqrt(pow(cross[0],2)+pow(cross[1],2)+pow(cross[2],2));
 
 	    }	
-	  while (fabs(norm_tmp_lattice_vec_a - norm_tmp_lattice_vec_b) < epsilon_length 
-	  	|| fabs(gamma_in_deg - 90) < epsilon || fabs(gamma_in_deg - 120) < epsilon ||
+		//remove the constraint that a,b should be different
+	  while (fabs(gamma_in_deg - 90) < epsilon || fabs(gamma_in_deg - 120) < epsilon ||
 	        new_area > (interface_area_mean + interface_area_std ) || 
 		new_area < (interface_area_mean - interface_area_std));
 	  
@@ -425,8 +444,6 @@ void generate_layer_lattice(int *all_substrate_combo,float lattice_vector[3][3],
 			counter++;
 			if (counter > 10000000)
 			{
-				//printf("I am over 10000\n");
-				//fflush(stdout);
 				for (int i = 0; i < 3; i++)
 					{
 						for (int j =0; j<3; j++)
@@ -446,10 +463,14 @@ void generate_layer_lattice(int *all_substrate_combo,float lattice_vector[3][3],
 		
 			
         }
-      while (fabs(norm_tmp_lattice_vec_a - norm_tmp_lattice_vec_b) < epsilon_length ||
-	     fabs(gamma_in_deg - 90) < epsilon || fabs(gamma_in_deg - 120) < epsilon || 
+		 while (fabs(gamma_in_deg - 90) < epsilon || fabs(gamma_in_deg - 120) < epsilon || 
 	     new_area > (interface_area_mean + interface_area_std ) || 
 	     new_area < (interface_area_mean - interface_area_std));
+
+        //while (fabs(norm_tmp_lattice_vec_a - norm_tmp_lattice_vec_b) < epsilon_length ||
+	    // fabs(gamma_in_deg - 90) < epsilon || fabs(gamma_in_deg - 120) < epsilon || 
+	     //new_area > (interface_area_mean + interface_area_std ) || 
+	    // new_area < (interface_area_mean - interface_area_std));
 
 	  generate_oblique_monoclinic( lattice_vector,target_volume * volume_multiplier,max_angle, min_angle, tmp_lattice_vec_a,tmp_lattice_vec_b,norm_tmp_lattice_vec_a,norm_tmp_lattice_vec_b,gamma);
         }   
@@ -466,8 +487,8 @@ void generate_layer_lattice(int *all_substrate_combo,float lattice_vector[3][3],
 			int chosen_factor_2= all_substrate_combo[rand_index * 4 +1 ];
 			int chosen_factor_3= all_substrate_combo[rand_index * 4 +2 ];
 			int chosen_factor_4= all_substrate_combo[rand_index * 4 +3 ];
-
 			float transform_martix[3][3] = {{chosen_factor_1,chosen_factor_2,0},{chosen_factor_3,chosen_factor_4,0},{0,0,1}};
+			//float transform_martix[3][3] = {{6,3,0},{0,5,0},{0,0,1}};
 			float new_vec[3][3];
 			mat3b3_mat3b3_multiply(transform_martix, prim_lv, new_vec);
 			get_lower_triangle(new_vec,lower_lattice_vector);
@@ -489,8 +510,6 @@ void generate_layer_lattice(int *all_substrate_combo,float lattice_vector[3][3],
 			counter++;
 			if (counter > 10000000)
 			{
-				//printf("I am over 10000\n");
-				//fflush(stdout);
 				for (int i = 0; i < 3; i++)
 					{
 						for (int j =0; j<3; j++)
@@ -554,8 +573,7 @@ void generate_layer_lattice(int *all_substrate_combo,float lattice_vector[3][3],
 			counter++;
 			if (counter > 10000000)
 			{
-				//printf("I am over 10000\n");
-				//fflush(stdout);
+		
 				for (int i = 0; i < 3; i++)
 					{
 						for (int j =0; j<3; j++)
@@ -615,8 +633,7 @@ void generate_layer_lattice(int *all_substrate_combo,float lattice_vector[3][3],
 			counter++;
 			if (counter > 10000000)
 			{
-				//printf("I am over 10000\n");
-				//fflush(stdout);
+				
 				for (int i = 0; i < 3; i++)
 					{
 						for (int j =0; j<3; j++)
@@ -676,8 +693,7 @@ void generate_layer_lattice(int *all_substrate_combo,float lattice_vector[3][3],
 			counter++;
 			if (counter > 10000000)
 			{
-				//printf("I am over 10000\n");
-				//fflush(stdout);
+	
 				for (int i = 0; i < 3; i++)
 					{
 						for (int j =0; j<3; j++)

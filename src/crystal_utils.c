@@ -94,7 +94,8 @@ void print_crystal2file(crystal* xtal, FILE* out_file)
 
 //////////////////////////// for layer group /////////////////////
 
-void print_layer2file(crystal* xtal, FILE* out_file)
+void print_layer2file(int detected_lg,crystal* xtal, FILE* out_file)
+//void print_layer2file(crystal* xtal, FILE* out_file)
 {
 
     static int counter = 1;
@@ -135,7 +136,7 @@ void print_layer2file(crystal* xtal, FILE* out_file)
 
 
 
-    fprintf(out_file, "#attempted_spacegroup = %d\n", xtal->spg);
+    fprintf(out_file, "#attempted_layergroup = %d\n", xtal->spg);
 
     char letter = lg_positions[xtal->spg - 1].wyckoff_letter[xtal->wyckoff_position];
     fprintf(out_file, "#attempted_wyckoff_position = %d%c\n", xtal->Z, letter);
@@ -146,7 +147,7 @@ void print_layer2file(crystal* xtal, FILE* out_file)
      site_symm);
 
     int spglib_spg = detect_spg_using_spglib(xtal);
-    fprintf(out_file, "#SPGLIB_detected_spacegroup = %d\n", spglib_spg);
+    fprintf(out_file, "#Detected_layergroup = %d\n", detected_lg);
 
     fprintf(out_file, "#\"All distances in Angstroms and using Cartesian coordinate system\"\n");
 
@@ -630,6 +631,8 @@ int detect_spg_using_spglib(crystal* xtal)
         types[i] = 36;
         else if (atom[2*i] == 'S' && atom[2*i+1] == 'i')
         types[i] = 14;
+        else if (atom[2*i] == 'Z' && atom[2*i+1] == 'n')
+        types[i] = 30;
         else
         {printf("***ERROR: spglib detector: atom not found -> %c%c\n", atom[2*i], atom[2*i+1]);exit(0);}
 

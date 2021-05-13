@@ -5,6 +5,7 @@
 #include <stdlib.h>
 
 #include "molecule.h"
+#include "crystal.h"
 
 void read_control(int* num_structures, int* Z, float* Zp_max,
                  float* volume_mean,float* volume_std,
@@ -17,6 +18,8 @@ void read_control(int* num_structures, int* Z, float* Zp_max,
                  float* angle_std);
 
 void read_geometry(molecule* mol);
+
+void read_crystal_geometry(crystal* xtal, char* geo_name);
 
 void print_input_geometry(molecule* mol);
 
